@@ -4,43 +4,37 @@ const SQLiteStore=require('connect-sqlite3')(session);
 const Database=require('better-sqlite3');
 const {Client,Environment,OrdersController,CheckoutPaymentIntent}=require('@paypal/paypal-server-sdk');
 
-/*
- * The application has existed through several schema versions. SQLite's
- * CREATE TABLE IF NOT EXISTS does not add columns to an existing database,
- * so an old data/app.db could make otherwise valid SELECTs fail with
- * "no such column" and turn the dashboard APIs into HTTP 500 responses.
- * Run a small idempotent migration before server.js is loaded.
- */
+/* Idempotent schema migration for existing SQLite databases. */
 const dataDir=path.join(__dirname,'data');
 fs.mkdirSync(dataDir,{recursive:true});
 const migrationDb=new Database(path.join(dataDir,'app.db'));
+function tableExists(table){return !!migrationDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table)}
+function columnExists(table,column){return tableExists(table)&&!!migrationDb.prepare(`PRAGMA table_info(${table})`).all().find(c=>c.name===column)}
 function addColumn(table,column,definition){
-  try{migrationDb.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();}catch(e){
-    if(!String(e.message||e).toLowerCase().includes('duplicate column')) throw e;
-  }
+  if(!tableExists(table)||columnExists(table,column))return;
+  try{migrationDb.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);console.log(`[DB migration] added ${table}.${column}`)}catch(e){console.error(`[DB migration] failed ${table}.${column}:`,e.message)}
 }
-try{
-  addColumn('users','last_login_at','TEXT');
-  addColumn('users','phone',"TEXT DEFAULT ''");
-  addColumn('users','bio',"TEXT DEFAULT ''");
-  addColumn('services','description',"TEXT NOT NULL DEFAULT ''");
-  addColumn('services','duration','INTEGER NOT NULL DEFAULT 60');
-  addColumn('services','price_cents','INTEGER NOT NULL DEFAULT 0');
-  addColumn('services','active','INTEGER NOT NULL DEFAULT 1');
-
-  /* Legacy databases did not have the service relation on consultations. */
-  addColumn('consultations','service_id','INTEGER NOT NULL DEFAULT 1');
-  addColumn('consultations','duration','INTEGER NOT NULL DEFAULT 60');
-  addColumn('consultations','status',"TEXT NOT NULL DEFAULT 'pending'");
-  addColumn('consultations','payment_status',"TEXT NOT NULL DEFAULT 'unpaid'");
-  addColumn('consultations','stripe_session_id','TEXT');
-  addColumn('consultations','completed_at','TEXT');
-  addColumn('consultations','paypal_order_id','TEXT');
-  addColumn('consultations','paypal_capture_id','TEXT');
-  addColumn('audit_logs','metadata',"TEXT DEFAULT ''");
-  addColumn('audit_logs','created_at',"TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP");
-}catch(e){
-  console.error('[DB migration] schema migration failed:',e.message);
+addColumn('users','last_login_at','TEXT');
+addColumn('users','phone',"TEXT DEFAULT ''");
+addColumn('users','bio',"TEXT DEFAULT ''");
+addColumn('services','description',"TEXT NOT NULL DEFAULT ''");
+addColumn('services','duration','INTEGER NOT NULL DEFAULT 60');
+addColumn('services','price_cents','INTEGER NOT NULL DEFAULT 0');
+addColumn('services','active','INTEGER NOT NULL DEFAULT 1');
+addColumn('consultations','service_id','INTEGER NOT NULL DEFAULT 1');
+addColumn('consultations','duration','INTEGER NOT NULL DEFAULT 60');
+addColumn('consultations','status',"TEXT NOT NULL DEFAULT 'pending'");
+addColumn('consultations','payment_status',"TEXT NOT NULL DEFAULT 'unpaid'");
+addColumn('consultations','stripe_session_id','TEXT');
+addColumn('consultations','completed_at','TEXT');
+addColumn('consultations','paypal_order_id','TEXT');
+addColumn('consultations','paypal_capture_id','TEXT');
+addColumn('audit_logs','metadata',"TEXT DEFAULT ''");
+/* SQLite requires a constant default for ALTER TABLE ADD COLUMN. */
+addColumn('audit_logs','created_at',"TEXT DEFAULT ''");
+if(tableExists('services')&&tableExists('consultations')){
+  const service=migrationDb.prepare('SELECT id FROM services ORDER BY id LIMIT 1').get();
+  if(service&&columnExists('consultations','service_id'))try{migrationDb.prepare('UPDATE consultations SET service_id=? WHERE service_id IS NULL OR service_id=0').run(service.id)}catch(e){console.error('[DB migration] consultation repair failed:',e.message)}
 }
 migrationDb.close();
 
@@ -61,5 +55,5 @@ function attach(app){
   const csrf=(req,res,next)=>{const a=req.get('x-csrf-token'),b=req.session.csrfToken;if(!a||!b||a.length!==b.length||!crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b)))return res.status(403).json({error:'Jeton de sécurité invalide.'});next()};
   app.use('/api/paypal',paypalSession);app.use('/api/paypal',(req,res,next)=>{if(['POST','PATCH','PUT','DELETE'].includes(req.method))return csrf(req,res,next);next()});
   app.post('/api/paypal/orders',auth,(req,res)=>{try{const id=Number(req.body?.consultationId),c=db.prepare('SELECT c.*,s.name service_name,s.price_cents FROM consultations c JOIN services s ON s.id=c.service_id WHERE c.id=? AND c.user_id=?').get(id,req.session.userId);if(!c)return res.status(404).json({error:'Consultation introuvable.'});if(c.status==='cancelled'||c.status==='completed')return res.status(400).json({error:'Cette consultation ne peut plus être payée.'});if(c.payment_status==='paid')return res.status(409).json({error:'Cette consultation est déjà payée.'});const amount=(Number(c.price_cents||0)/100).toFixed(2),currency=String(process.env.PAYPAL_CURRENCY||'EUR').toUpperCase();if(Number(amount)<=0)return res.status(400).json({error:'Le tarif de cette consultation est invalide.'});orders.createOrder({body:{intent:CheckoutPaymentIntent.Capture,purchaseUnits:[{referenceId:String(c.id),description:String(c.service_name||'Consultation').slice(0,127),customId:String(c.id),amount:{currencyCode:currency,value:amount}}]},prefer:'return=minimal'}).then(r=>{const order=r.result;if(!order?.id)throw Error('PayPal order ID manquant');db.prepare('UPDATE consultations SET paypal_order_id=? WHERE id=?').run(order.id,c.id);res.json({orderId:order.id})}).catch(e=>{console.error('PayPal create order',e);res.status(502).json({error:'Impossible de créer le paiement PayPal.'})})}catch(e){console.error('PayPal create request',e);res.status(400).json({error:'Demande PayPal invalide.'})}});
-  app.post('/api/paypal/orders/:orderId/capture',auth,(req,res)=>{const orderId=String(req.params.orderId||''),c=db.prepare('SELECT c.* FROM consultations c WHERE c.paypal_order_id=? AND c.user_id=?').get(orderId,req.session.userId);if(!c)return res.status(404).json({error:'Commande PayPal introuvable.'});orders.captureOrder({id:orderId}).then(r=>{const result=r.result||{},capture=result.purchaseUnits?.[0]?.payments?.captures?.[0];if(result.status!=='COMPLETED'||!capture?.id)throw Error('Paiement non confirmé');db.prepare('UPDATE consultations SET payment_status="paid",paypal_capture_id=? WHERE id=?').run(capture.id,c.id);res.json({ok:true,orderId,captureId:capture.id,status:result.status})}).catch(e=>{console.error('PayPal capture',e);res.status(502).json({error:'Le paiement PayPal n’a pas pu être confirmé.'})})});
+  app.post('/api/paypal/orders/:orderId/capture',auth,(req,res)=>{const orderId=String(req.params.orderId||''),c=db.prepare('SELECT c.* FROM consultations c WHERE c.paypal_order_id=? AND c.user_id=?').get(orderId,req.session.userId);if(!c)return res.status(404).json({error:'Commande PayPal introuvable.'});orders.captureOrder({id:orderId}).then(r=>{const result=r.result||{},capture=result.purchaseUnits?.[0]?.payments?.captures?.[0];if(result.status!=='COMPLETED'||!capture?.id)throw Error('Paiement non confirmé');db.prepare("UPDATE consultations SET payment_status='paid',paypal_capture_id=? WHERE id=?").run(capture.id,c.id);res.json({ok:true,orderId,captureId:capture.id,status:result.status})}).catch(e=>{console.error('PayPal capture',e);res.status(502).json({error:'Le paiement PayPal n’a pas pu être confirmé.'})})});
 }

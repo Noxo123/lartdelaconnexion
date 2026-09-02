@@ -2,7 +2,7 @@
   "name":"lartdelaconnexion",
   "version":"2.2.1",
   "private":true,
-  "description":"Plateforme premium de consultations privées, réservation, paiements Stripe et PayPal, visioconférence WebRTC et messagerie privée.",
+  "description":"Plateforme premium de consultations privées, réservation, paiement PayPal, visioconférence WebRTC et messagerie privée.",
   "main":"server.js",
   "scripts":{
     "start":"node -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js server.js",
@@ -21,7 +21,6 @@
     "socket.io":"^4.8.1",
     "sqlite3":"^5.1.7",
     "zod":"^3.24.2",
-    "stripe":"^18.5.0",
     "@paypal/paypal-server-sdk":"^1.0.0",
     "multer":"^2.0.2"
   }

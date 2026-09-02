@@ -3,98 +3,19 @@ const session=require('express-session');
 const SQLiteStore=require('connect-sqlite3')(session);
 const Database=require('better-sqlite3');
 const {Client,Environment,OrdersController,CheckoutPaymentIntent}=require('@paypal/paypal-server-sdk');
-
-/* Idempotent schema migration for existing SQLite databases. */
 const dataDir=path.join(__dirname,'data');
 fs.mkdirSync(dataDir,{recursive:true});
 const migrationDb=new Database(path.join(dataDir,'app.db'));
 function tableExists(table){return !!migrationDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table)}
 function columnExists(table,column){return tableExists(table)&&!!migrationDb.prepare(`PRAGMA table_info(${table})`).all().find(c=>c.name===column)}
-function addColumn(table,column,definition){
-  if(!tableExists(table)||columnExists(table,column))return;
-  try{migrationDb.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);console.log(`[DB migration] added ${table}.${column}`)}catch(e){console.error(`[DB migration] failed ${table}.${column}:`,e.message)}
-}
-addColumn('users','last_login_at','TEXT');
-addColumn('users','phone',"TEXT DEFAULT ''");
-addColumn('users','bio',"TEXT DEFAULT ''");
-addColumn('services','description',"TEXT NOT NULL DEFAULT ''");
-addColumn('services','duration','INTEGER NOT NULL DEFAULT 60');
-addColumn('services','price_cents','INTEGER NOT NULL DEFAULT 0');
-addColumn('services','active','INTEGER NOT NULL DEFAULT 1');
-addColumn('consultations','service_id','INTEGER NOT NULL DEFAULT 1');
-addColumn('consultations','duration','INTEGER NOT NULL DEFAULT 60');
-addColumn('consultations','status',"TEXT NOT NULL DEFAULT 'pending'");
-addColumn('consultations','payment_status',"TEXT NOT NULL DEFAULT 'unpaid'");
-addColumn('consultations','completed_at','TEXT');
-addColumn('consultations','paypal_order_id','TEXT');
-addColumn('consultations','paypal_capture_id','TEXT');
-addColumn('audit_logs','metadata',"TEXT DEFAULT ''");
-/* SQLite requires a constant default for ALTER TABLE ADD COLUMN. */
-addColumn('audit_logs','created_at',"TEXT DEFAULT ''");
-if(tableExists('services')&&tableExists('consultations')){
-  const service=migrationDb.prepare('SELECT id FROM services ORDER BY id LIMIT 1').get();
-  if(service&&columnExists('consultations','service_id'))try{migrationDb.prepare('UPDATE consultations SET service_id=? WHERE service_id IS NULL OR service_id=0').run(service.id)}catch(e){console.error('[DB migration] consultation repair failed:',e.message)}
-}
+function addColumn(table,column,definition){if(!tableExists(table)||columnExists(table,column))return;try{migrationDb.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);console.log(`[DB migration] added ${table}.${column}`)}catch(e){console.error(`[DB migration] failed ${table}.${column}:`,e.message)}}
+addColumn('users','last_login_at','TEXT');addColumn('users','phone',"TEXT DEFAULT ''");addColumn('users','bio',"TEXT DEFAULT ''");addColumn('services','description',"TEXT NOT NULL DEFAULT ''");addColumn('services','duration','INTEGER NOT NULL DEFAULT 60');addColumn('services','price_cents','INTEGER NOT NULL DEFAULT 0');addColumn('services','active','INTEGER NOT NULL DEFAULT 1');addColumn('consultations','service_id','INTEGER NOT NULL DEFAULT 1');addColumn('consultations','duration','INTEGER NOT NULL DEFAULT 60');addColumn('consultations','status',"TEXT NOT NULL DEFAULT 'pending'");addColumn('consultations','payment_status',"TEXT NOT NULL DEFAULT 'unpaid'");addColumn('consultations','completed_at','TEXT');addColumn('consultations','paypal_order_id','TEXT');addColumn('consultations','paypal_capture_id','TEXT');addColumn('audit_logs','metadata',"TEXT DEFAULT ''");addColumn('audit_logs','created_at',"TEXT DEFAULT ''");
+if(tableExists('services')&&tableExists('consultations')){const service=migrationDb.prepare('SELECT id FROM services ORDER BY id LIMIT 1').get();if(service&&columnExists('consultations','service_id'))try{migrationDb.prepare('UPDATE consultations SET service_id=? WHERE service_id IS NULL OR service_id=0').run(service.id)}catch(e){console.error('[DB migration] consultation repair failed:',e.message)}}
 migrationDb.close();
-
 const PAYPAL_CSP="default-src 'self'; script-src 'self' https://www.paypal.com https://www.sandbox.paypal.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://miro.medium.com https://www.paypal.com https://www.sandbox.paypal.com; connect-src 'self' ws: wss: https://www.paypal.com https://www.sandbox.paypal.com https://api-m.paypal.com https://api-m.sandbox.paypal.com; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com; media-src 'self' blob:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com";
 const originalSetHeader=http.ServerResponse.prototype.setHeader;http.ServerResponse.prototype.setHeader=function(name,value){if(String(name).toLowerCase()==='content-security-policy')value=PAYPAL_CSP;return originalSetHeader.call(this,name,value)};
 const originalExpress=require('express');
-const wrappedExpress=function(...args){
-  const app=originalExpress(...args);
-  const enabled=Boolean(process.env.PAYPAL_CLIENT_ID&&process.env.PAYPAL_CLIENT_SECRET);
-  const environment=String(process.env.PAYPAL_ENVIRONMENT||'sandbox').toLowerCase()==='production'?Environment.Production:Environment.Sandbox;
-  app.get('/api/paypal/config',(req,res)=>res.json({enabled,environment:environment===Environment.Production?'production':'sandbox',currency:String(process.env.PAYPAL_CURRENCY||'EUR').toUpperCase(),clientId:enabled?process.env.PAYPAL_CLIENT_ID:null}));
-  setImmediate(()=>attach(app,{enabled,environment}));
-  return app
-};
+const wrappedExpress=function(...args){const app=originalExpress(...args);const enabled=Boolean(process.env.PAYPAL_CLIENT_ID&&process.env.PAYPAL_CLIENT_SECRET);const environment=String(process.env.PAYPAL_ENVIRONMENT||'sandbox').toLowerCase()==='production'?Environment.Production:Environment.Sandbox;app.get('/api/paypal/config',(req,res)=>res.json({enabled,environment:environment===Environment.Production?'production':'sandbox',currency:String(process.env.PAYPAL_CURRENCY||'EUR').toUpperCase(),clientId:enabled?process.env.PAYPAL_CLIENT_ID:null}));setImmediate(()=>{attach(app,{enabled,environment});movePaypalRoutesBeforeSpaFallback(app)});return app};
 Object.assign(wrappedExpress,originalExpress);require.cache[require.resolve('express')].exports=wrappedExpress;
-function attach(app,{enabled,environment}){
-  if(!enabled)return;
-  const prod=process.env.NODE_ENV==='production';
-  const db=new Database(path.join(__dirname,'data','app.db'));
-  const client=new Client({clientCredentialsAuthCredentials:{oAuthClientId:process.env.PAYPAL_CLIENT_ID,oAuthClientSecret:process.env.PAYPAL_CLIENT_SECRET},environment});
-  const orders=new OrdersController(client);
-  const paypalSession=session({name:prod?'__Host-ladc.sid':'ladc.sid',store:new SQLiteStore({db:'sessions.db',dir:dataDir}),secret:process.env.SESSION_SECRET||'dev-only-change-this-secret-before-production',resave:false,saveUninitialized:false,rolling:true,cookie:{httpOnly:true,secure:prod,sameSite:'lax',maxAge:8*60*60*1000,path:'/'}});
-  const auth=(req,res,next)=>req.session.userId?next():res.status(401).json({error:'Authentification requise.'});
-  const csrf=(req,res,next)=>{const a=req.get('x-csrf-token'),b=req.session.csrfToken;if(!a||!b||a.length!==b.length||!crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b)))return res.status(403).json({error:'Jeton de sécurité invalide.'});next()};
-  app.use('/api/paypal',paypalSession);
-  app.use('/api/paypal',(req,res,next)=>{if(['POST','PATCH','PUT','DELETE'].includes(req.method))return csrf(req,res,next);next()});
-  app.use('/api/payments',paypalSession);
-  app.use('/api/payments',(req,res,next)=>{if(['POST','PATCH','PUT','DELETE'].includes(req.method))return csrf(req,res,next);next()});
-
-  const createOrder=async(req,res)=>{
-    try{
-      const id=Number(req.body?.consultationId);
-      const c=db.prepare('SELECT c.*,s.name service_name,s.price_cents FROM consultations c JOIN services s ON s.id=c.service_id WHERE c.id=? AND c.user_id=?').get(id,req.session.userId);
-      if(!c)return res.status(404).json({error:'Consultation introuvable.'});
-      if(c.status==='cancelled'||c.status==='completed')return res.status(400).json({error:'Cette consultation ne peut plus être payée.'});
-      if(c.payment_status==='paid')return res.status(409).json({error:'Cette consultation est déjà payée.'});
-      const amount=(Number(c.price_cents||0)/100).toFixed(2),currency=String(process.env.PAYPAL_CURRENCY||'EUR').toUpperCase();
-      if(Number(amount)<=0)return res.status(400).json({error:'Le tarif de cette consultation est invalide.'});
-      const response=await orders.createOrder({body:{intent:CheckoutPaymentIntent.Capture,purchaseUnits:[{referenceId:String(c.id),description:String(c.service_name||'Consultation').slice(0,127),customId:String(c.id),amount:{currencyCode:currency,value:amount}}]},prefer:'return=minimal'});
-      const order=response.result;
-      if(!order?.id)throw Error('PayPal order ID manquant');
-      db.prepare('UPDATE consultations SET paypal_order_id=? WHERE id=?').run(order.id,c.id);
-      const approvalUrl=Array.isArray(order.links)?order.links.find(l=>l.rel==='approve')?.href:null;
-      res.json({ok:true,orderId:order.id,url:approvalUrl});
-    }catch(e){console.error('PayPal create order',e);res.status(502).json({error:'Impossible de créer le paiement PayPal.'})}
-  };
-
-  /* Current PayPal API. */
-  app.post('/api/paypal/orders',auth,(req,res)=>createOrder(req,res));
-  app.post('/api/paypal/orders/:orderId/capture',auth,(req,res)=>{
-    const orderId=String(req.params.orderId||'');
-    const c=db.prepare('SELECT c.* FROM consultations c WHERE c.paypal_order_id=? AND c.user_id=?').get(orderId,req.session.userId);
-    if(!c)return res.status(404).json({error:'Commande PayPal introuvable.'});
-    orders.captureOrder({id:orderId}).then(r=>{
-      const result=r.result||{},capture=result.purchaseUnits?.[0]?.payments?.captures?.[0];
-      if(result.status!=='COMPLETED'||!capture?.id)throw Error('Paiement non confirmé');
-      db.prepare("UPDATE consultations SET payment_status='paid',paypal_capture_id=? WHERE id=?").run(capture.id,c.id);
-      res.json({ok:true,orderId,captureId:capture.id,status:result.status})
-    }).catch(e=>{console.error('PayPal capture',e);res.status(502).json({error:'Le paiement PayPal n’a pas pu être confirmé.'})})
-  });
-
-  /* Compatibility endpoint for the existing dashboard button. */
-  app.post('/api/payments/create-checkout',auth,(req,res)=>createOrder(req,res));
-}
+function movePaypalRoutesBeforeSpaFallback(app){try{const stack=app.router?.stack||app._router?.stack;if(!Array.isArray(stack))return;const paypal=stack.filter(l=>{const p=l.route?.path;return typeof p==='string'&&(p.startsWith('/api/paypal')||p.startsWith('/api/payments'))});if(!paypal.length)return;for(const l of paypal){const i=stack.indexOf(l);if(i>=0)stack.splice(i,1)}const fallback=stack.findIndex(l=>l.route?.path==='/{*splat}'||l.route?.path==='*');const target=fallback>=0?fallback:stack.length;stack.splice(target,0,...paypal);console.log('[paypal] routes moved before SPA fallback')}catch(e){console.error('[paypal] route reorder:',e.message)}}
+function attach(app,{enabled,environment}){if(!enabled)return;const prod=process.env.NODE_ENV==='production';const db=new Database(path.join(__dirname,'data','app.db'));const client=new Client({clientCredentialsAuthCredentials:{oAuthClientId:process.env.PAYPAL_CLIENT_ID,oAuthClientSecret:process.env.PAYPAL_CLIENT_SECRET},environment});const orders=new OrdersController(client);const paypalSession=session({name:prod?'__Host-ladc.sid':'ladc.sid',store:new SQLiteStore({db:'sessions.db',dir:dataDir}),secret:process.env.SESSION_SECRET||'dev-only-change-this-secret-before-production',resave:false,saveUninitialized:false,rolling:true,cookie:{httpOnly:true,secure:prod,sameSite:'lax',maxAge:8*60*60*1000,path:'/'}});const auth=(req,res,next)=>req.session.userId?next():res.status(401).json({error:'Authentification requise.'});const csrf=(req,res,next)=>{const a=req.get('x-csrf-token'),b=req.session.csrfToken;if(!a||!b||a.length!==b.length||!crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b)))return res.status(403).json({error:'Jeton de sécurité invalide.'});next()};app.use('/api/paypal',paypalSession);app.use('/api/paypal',(req,res,next)=>{if(['POST','PATCH','PUT','DELETE'].includes(req.method))return csrf(req,res,next);next()});app.use('/api/payments',paypalSession);app.use('/api/payments',(req,res,next)=>{if(['POST','PATCH','PUT','DELETE'].includes(req.method))return csrf(req,res,next);next()});const createOrder=async(req,res)=>{try{const id=Number(req.body?.consultationId);const c=db.prepare('SELECT c.*,s.name service_name,s.price_cents FROM consultations c JOIN services s ON s.id=c.service_id WHERE c.id=? AND c.user_id=?').get(id,req.session.userId);if(!c)return res.status(404).json({error:'Consultation introuvable.'});if(c.status==='cancelled'||c.status==='completed')return res.status(400).json({error:'Cette consultation ne peut plus être payée.'});if(c.payment_status==='paid')return res.status(409).json({error:'Cette consultation est déjà payée.'});const amount=(Number(c.price_cents||0)/100).toFixed(2),currency=String(process.env.PAYPAL_CURRENCY||'EUR').toUpperCase();if(Number(amount)<=0)return res.status(400).json({error:'Le tarif de cette consultation est invalide.'});const response=await orders.createOrder({body:{intent:CheckoutPaymentIntent.Capture,purchaseUnits:[{referenceId:String(c.id),description:String(c.service_name||'Consultation').slice(0,127),customId:String(c.id),amount:{currencyCode:currency,value:amount}}]},prefer:'return=minimal'});const order=response.result;if(!order?.id)throw Error('PayPal order ID manquant');db.prepare('UPDATE consultations SET paypal_order_id=? WHERE id=?').run(order.id,c.id);const approvalUrl=Array.isArray(order.links)?order.links.find(l=>l.rel==='approve')?.href:null;res.json({ok:true,orderId:order.id,url:approvalUrl})}catch(e){console.error('PayPal create order',e);res.status(502).json({error:'Impossible de créer le paiement PayPal.'})}};app.post('/api/paypal/orders',auth,(req,res)=>createOrder(req,res));app.post('/api/paypal/orders/:orderId/capture',auth,(req,res)=>{const orderId=String(req.params.orderId||'');const c=db.prepare('SELECT c.* FROM consultations c WHERE c.paypal_order_id=? AND c.user_id=?').get(orderId,req.session.userId);if(!c)return res.status(404).json({error:'Commande PayPal introuvable.'});orders.captureOrder({id:orderId}).then(r=>{const result=r.result||{},capture=result.purchaseUnits?.[0]?.payments?.captures?.[0];if(result.status!=='COMPLETED'||!capture?.id)throw Error('Paiement non confirmé');db.prepare("UPDATE consultations SET payment_status='paid',paypal_capture_id=? WHERE id=?").run(capture.id,c.id);res.json({ok:true,orderId,captureId:capture.id,status:result.status})}).catch(e=>{console.error('PayPal capture',e);res.status(502).json({error:'Le paiement PayPal n’a pas pu être confirmé.'})})});app.post('/api/payments/create-checkout',auth,(req,res)=>createOrder(req,res))}

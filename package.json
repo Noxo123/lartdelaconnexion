@@ -5,8 +5,8 @@
   "description":"Plateforme premium de consultations privées, réservation, paiement PayPal, visioconférence WebRTC et messagerie privée.",
   "main":"server.js",
   "scripts":{
-    "start":"node -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js server.js",
-    "dev":"node -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js --watch server.js"
+    "start":"node -r ./express5-bootstrap.js -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js -r ./commerce-bootstrap.js server.js",
+    "dev":"node -r ./express5-bootstrap.js -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js -r ./commerce-bootstrap.js --watch server.js"
   },
   "engines":{"node":">=20"},
   "dependencies":{

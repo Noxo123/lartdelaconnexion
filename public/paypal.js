@@ -1,6 +1,6 @@
 (() => {
   let sdkPromise=null, config=null;
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
   const getConfig=async()=>config||(config=await fetch('/api/paypal/config',{credentials:'same-origin'}).then(r=>r.json()));
   async function loadSdk(){
     if(sdkPromise)return sdkPromise;
@@ -14,12 +14,14 @@
     return sdkPromise;
   }
   async function mount(button){
+    if(button.tagName==='BUTTON'&&!button.hasAttribute('data-paypal-widget'))return;
     if(button.dataset.paypalMounted)return;
     button.dataset.paypalMounted='loading';
     try{
       const c=await getConfig();if(!c.enabled){button.dataset.paypalMounted='disabled';return}
       const sdk=await loadSdk();
-      const methods=await sdk.createInstance({clientId:c.clientId,components:['paypal-payments'],pageType:'checkout'}).then(x=>x.findEligibleMethods({currencyCode:c.currency}).then(m=>({sdk:x,methods:m})));
+      if(!sdk)throw new Error('PayPal est désactivé.');
+      const methods=await sdk.createInstance({clientId:c.clientId,components:['paypal-payments'],pageType:'checkout').then(x=>x.findEligibleMethods({currencyCode:c.currency}).then(m=>({sdk:x,methods:m})));
       if(!methods.methods.isEligible('paypal')){button.dataset.paypalMounted='ineligible';return}
       const consultationId=button.dataset.pay;
       const host=document.createElement('div');host.className='paypal-button-wrap';

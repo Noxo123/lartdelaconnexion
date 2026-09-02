@@ -40,12 +40,21 @@
       title.textContent=`Conversation avec ${name}`;
       subtitle.textContent=isOwner&&first?`Échange privé avec ${first}.`:'Échangez par message et envoyez des images en toute confidentialité.';
     }
+    function transferMarkup(bodyText,mine){
+      const sent=bodyText.match(/vous a envoyé\s+([0-9]+(?:[.,][0-9]{1,2})?)\s*€/i);
+      const cancelled=/^annulé$/i.test(bodyText.trim());
+      if(!sent&&!cancelled)return null;
+      if(cancelled)return `<div class="money-transfer-card is-cancelled"><div class="money-transfer-top"><span class="money-transfer-icon">↗</span><span>Transfert d’argent</span></div><strong class="money-transfer-status">Annulé</strong><p>Le transfert n’a pas été confirmé dans le délai imparti.</p></div>`;
+      const amount=sent[1].replace('.',',');
+      return `<div class="money-transfer-card ${mine?'is-mine':'is-received'}"><div class="money-transfer-top"><span class="money-transfer-icon">€</span><span>${mine?'Argent envoyé':'Argent reçu'}</span></div><strong class="money-transfer-amount">${amount} €</strong><div class="money-transfer-status"><span class="money-transfer-check">✓</span> Paiement confirmé</div></div>`;
+    }
     function render(messages){
       if(!messages.length&&lastId===0){body.innerHTML='<div class="chat-empty">Aucun message pour le moment.<br><span>Vous pouvez commencer la conversation.</span></div>';return}
       messages.forEach(m=>{
         const mine=Number(m.senderId)===Number(window.__ladcUserId);const node=document.createElement('article');node.className='chat-message '+(mine?'mine':'theirs');
         const image=m.attachment?`<a class="chat-image" href="${esc(m.attachment.url)}" target="_blank" rel="noopener"><img src="${esc(m.attachment.url)}" alt="${esc(m.attachment.name||'Image envoyée')}" loading="lazy"><span>Ouvrir l'image</span></a>`:'';
-        node.innerHTML=`<div class="chat-bubble">${m.body?`<p>${esc(m.body).replace(/\n/g,'<br>')}</p>`:''}${image}<time>${new Intl.DateTimeFormat('fr-FR',{dateStyle:'short',timeStyle:'short'}).format(new Date(m.createdAt))}</time></div>`;
+        const transfer=transferMarkup(String(m.body||''),mine);
+        node.innerHTML=transfer?`<div class="chat-bubble money-bubble">${transfer}<time>${new Intl.DateTimeFormat('fr-FR',{dateStyle:'short',timeStyle:'short'}).format(new Date(m.createdAt))}</time></div>`:`<div class="chat-bubble">${m.body?`<p>${esc(m.body).replace(/\n/g,'<br>')}</p>`:''}${image}<time>${new Intl.DateTimeFormat('fr-FR',{dateStyle:'short',timeStyle:'short'}).format(new Date(m.createdAt))}</time></div>`;
         const img=node.querySelector('img');if(img)img.addEventListener('error',()=>{img.closest('.chat-image').classList.add('chat-image-error');img.replaceWith(Object.assign(document.createElement('span'),{textContent:'Image indisponible'}))},{once:true});
         body.appendChild(node);lastId=Math.max(lastId,Number(m.id));
       });

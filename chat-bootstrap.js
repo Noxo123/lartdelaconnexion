@@ -8,11 +8,6 @@ fs.mkdirSync(uploadDir,{recursive:true});
 const db=new Database(path.join(dataDir,'app.db'));
 db.pragma('foreign_keys=ON');
 
-function ensureColumn(table,column,definition){
-  try{db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run()}catch(e){
-    if(!/duplicate column name/i.test(String(e.message))) throw e;
-  }
-}
 try{
   db.exec(`CREATE TABLE IF NOT EXISTS chat_messages(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,9 +44,13 @@ function attachChat(express){
   const original=express;
   const wrapped=function(){
     const app=original();
-    setImmediate(()=>install(app));
+    // IMPORTANT: install synchronously, before server.js registers its SPA fallback.
+    // Installing with setImmediate() placed these routes after the catch-all route,
+    // so /api/chat/* was returning the HTML application instead of JSON/files.
+    install(app);
     return app;
   };
+  Object.setPrototypeOf(wrapped,Object.getPrototypeOf(original));
   Object.assign(wrapped,original);
   return wrapped;
 }
@@ -109,19 +108,22 @@ function install(app){
     if(!m||!m.attachment_path||(req.session.role!=='owner'&&m.user_id!==req.session.userId))return res.status(404).end();
     const file=path.join(uploadDir,path.basename(m.attachment_path));
     if(!fs.existsSync(file))return res.status(404).end();
-    res.setHeader('Content-Type',m.attachment_type||'application/octet-stream');res.setHeader('Content-Disposition',`inline; filename="${String(m.attachment_name||'image').replace(/["\\\r\n]/g,'_')}"`);res.setHeader('X-Content-Type-Options','nosniff');res.sendFile(file);
+    res.setHeader('Content-Type',m.attachment_type||'application/octet-stream');
+    res.setHeader('Content-Disposition',`inline; filename="${String(m.attachment_name||'image').replace(/["\\\r\n]/g,'_')}"`);
+    res.setHeader('X-Content-Type-Options','nosniff');
+    res.sendFile(file);
   });
 }
 
 module.exports={attachChat};
 
-// Preload shim: capture Express factory, then install chat routes once server.js has built its app.
+// Preload shim: capture Express factory, then install chat routes synchronously
+// when server.js creates its Express application.
 try{
   const expressPath=require.resolve('express');
   const expressModule=require(expressPath);
   if(!expressModule.__chatWrapped){
     const wrapped=attachChat(expressModule);
-    Object.keys(require.cache[expressPath]?.exports||{}).forEach(()=>{});
     require.cache[expressPath].exports=wrapped;
     wrapped.__chatWrapped=true;
   }

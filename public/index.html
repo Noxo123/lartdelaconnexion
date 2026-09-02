@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#6d28d9" />
+  <meta name="description" content="L'Art de la Connexion — consultations de médiumnité privées et visioconférences sécurisées." />
+  <title>L'Art de la Connexion</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <header class="site-header">
+    <a class="brand" href="/" data-link>
+      <span class="brand-mark">✦</span>
+      <span><strong>L'Art de la Connexion</strong><small>Médiumnité & accompagnement</small></span>
+    </a>
+    <nav class="nav" id="mainNav">
+      <a href="/#approche">Approche</a>
+      <a href="/#consultation">Consultations</a>
+      <a href="/#securite">Confidentialité</a>
+      <a href="/connexion" class="nav-login" data-link>Connexion</a>
+      <a href="/inscription" class="button button-small" data-link>Créer un compte</a>
+    </nav>
+    <button class="menu-button" id="menuButton" aria-label="Ouvrir le menu">☰</button>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <footer class="footer">
+    <div>
+      <a class="brand footer-brand" href="/" data-link><span class="brand-mark">✦</span><span><strong>L'Art de la Connexion</strong><small>Un espace d'écoute, à distance.</small></span></a>
+    </div>
+    <p>Les consultations proposées relèvent du bien-être et ne remplacent aucun avis médical, juridique ou financier.</p>
+    <p>© <span id="year"></span> L'Art de la Connexion</p>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js" defer></script>
+</body>
+</html>

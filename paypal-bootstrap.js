@@ -27,6 +27,9 @@ try{
   addColumn('services','duration','INTEGER NOT NULL DEFAULT 60');
   addColumn('services','price_cents','INTEGER NOT NULL DEFAULT 0');
   addColumn('services','active','INTEGER NOT NULL DEFAULT 1');
+
+  /* Legacy databases did not have the service relation on consultations. */
+  addColumn('consultations','service_id','INTEGER NOT NULL DEFAULT 1');
   addColumn('consultations','duration','INTEGER NOT NULL DEFAULT 60');
   addColumn('consultations','status',"TEXT NOT NULL DEFAULT 'pending'");
   addColumn('consultations','payment_status',"TEXT NOT NULL DEFAULT 'unpaid'");

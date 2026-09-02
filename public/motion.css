@@ -1,0 +1,50 @@
+/* Premium micro-interactions — L'Art de la Connexion */
+@keyframes ladc-fade-up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes ladc-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes ladc-pop{0%{opacity:0;transform:scale(.94)}70%{transform:scale(1.015)}100%{opacity:1;transform:scale(1)}}
+@keyframes ladc-float{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-7px,0)}}
+@keyframes ladc-pulse{0%,100%{box-shadow:0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 0 0 9px rgba(139,92,246,.08)}}
+@keyframes ladc-shimmer{0%{background-position:-180% 0}100%{background-position:180% 0}}
+@keyframes ladc-ripple{to{transform:scale(4);opacity:0}}
+@keyframes ladc-spin{to{transform:rotate(360deg)}}
+
+html{scroll-behavior:smooth}
+body{transition:background-color .35s ease}
+body.motion-ready #app{animation:ladc-fade-in .42s ease both}
+body.is-transitioning #app{opacity:.35;transform:translateY(5px);transition:opacity .16s ease,transform .16s ease}
+
+.site-header{transition:box-shadow .3s ease,background-color .3s ease,transform .3s ease}
+.site-header.motion-scrolled{box-shadow:0 10px 35px rgba(83,45,126,.08);background:rgba(255,255,255,.93)}
+.brand-mark{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s ease}
+.brand:hover .brand-mark{transform:rotate(-7deg) scale(1.06);box-shadow:0 14px 32px rgba(109,40,217,.32)}
+.nav a:not(.button){position:relative;transition:color .2s ease,transform .2s ease}
+.nav a:not(.button):hover{transform:translateY(-1px)}
+.nav a:not(.button)::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:2px;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--primary-2));transform:scaleX(0);transform-origin:center;transition:transform .25s ease}
+.nav a:not(.button):hover::after{transform:scaleX(1)}
+.menu-button{transition:transform .2s ease,background .2s ease}.menu-button:hover{transform:scale(1.08)}
+
+.button{position:relative;overflow:hidden;isolation:isolate;transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,filter .22s ease}.button:hover{transform:translateY(-2px)}.button:active{transform:translateY(0) scale(.98);filter:brightness(.97)}
+.button::before{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.25) 45%,transparent 65%);background-size:220% 100%;transform:translateX(-100%);transition:transform .55s ease;pointer-events:none}.button:hover::before{transform:translateX(100%)}
+.button-ripple{position:absolute;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.42);transform:scale(0);pointer-events:none;animation:ladc-ripple .55s ease-out forwards;z-index:-1}
+
+.hero h1{animation:ladc-fade-up .65s .05s both}.hero-copy{animation:ladc-fade-up .65s .12s both}.hero-actions{animation:ladc-fade-up .65s .19s both}.trust-row{animation:ladc-fade-up .65s .26s both}.hero-frame{animation:ladc-pop .7s .1s both}.floating-card{animation:ladc-fade-up .65s .35s both}.floating-card.one{animation-delay:.35s}.floating-card.two{animation-delay:.48s}.hero-frame:hover{transform:rotate(0deg) translateY(-3px);transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+.floating-card{transition:transform .3s ease,box-shadow .3s ease}.floating-card:hover{transform:translateY(-5px);box-shadow:0 22px 45px rgba(76,29,149,.2)}
+.ambient-one{animation:ladc-float 9s ease-in-out infinite}.ambient-two{animation:ladc-float 11s 1s ease-in-out infinite reverse}
+
+.motion-reveal{opacity:0;transform:translateY(20px);transition:opacity .65s ease,transform .65s cubic-bezier(.2,.8,.2,1)}.motion-reveal.is-visible{opacity:1;transform:none}.motion-reveal:nth-child(2){transition-delay:.05s}.motion-reveal:nth-child(3){transition-delay:.1s}.motion-reveal:nth-child(4){transition-delay:.15s}
+.card,.panel,.consultation,.step,.stat,.auth-card,.quote-card{transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease,border-color .28s ease}.card:hover,.stat:hover{transform:translateY(-5px);box-shadow:0 20px 48px rgba(83,45,126,.11);border-color:#ddcff0}.consultation:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(83,45,126,.08)}.step:hover{transform:translateX(4px)}.card-icon,.step-number,.avatar{transition:transform .3s ease,box-shadow .3s ease}.card:hover .card-icon,.step:hover .step-number{transform:scale(1.08) rotate(-3deg);box-shadow:0 10px 24px rgba(109,40,217,.12)}
+
+.field input,.field textarea,.field select{transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}.field input:hover,.field textarea:hover,.field select:hover{border-color:#cbb8e3}.field input:focus,.field textarea:focus,.field select:focus{transform:translateY(-1px)}
+.auth-card{animation:ladc-pop .5s ease both}.avatar{animation:ladc-pulse 3s 1s ease-in-out infinite}
+
+.modal-backdrop{animation:ladc-fade-in .22s ease both}.modal{animation:ladc-pop .3s cubic-bezier(.2,.8,.2,1) both}.icon-button{transition:transform .2s ease,background .2s ease}.icon-button:hover{transform:rotate(6deg) scale(1.06)}
+.toast{transition:opacity .25s ease,transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease}.toast.show{box-shadow:0 24px 60px rgba(36,24,47,.24)}
+
+.video-page .stage{animation:ladc-pop .55s ease both}.local-wrap{transition:transform .25s ease,box-shadow .25s ease}.local-wrap:hover{transform:scale(1.025);box-shadow:0 16px 38px rgba(0,0,0,.38)}.control{transition:transform .2s ease,background .2s ease,box-shadow .2s ease}.control:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 8px 22px rgba(0,0,0,.2)}.control:active{transform:scale(.95)}
+
+.money-transfer-card{animation:ladc-pop .45s cubic-bezier(.2,.8,.2,1) both}.money-transfer-icon{transition:transform .35s ease}.money-transfer-card:hover .money-transfer-icon{transform:translateY(-2px) rotate(-8deg)}
+
+.button:disabled{background-image:linear-gradient(100deg,#e8def4 20%,#f8f4fc 35%,#e8def4 50%);background-size:220% 100%;animation:ladc-shimmer 1.5s linear infinite;color:#806f91}
+
+@media(max-width:900px){.hero h1{animation-delay:0}.hero-frame{animation-delay:.05s}.card:hover,.stat:hover{transform:translateY(-3px)}.step:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}.motion-reveal{opacity:1!important;transform:none!important}.button::before,.button-ripple{display:none!important}}

@@ -1,7 +1,7 @@
-(() => {
+(()=>{
   let sdkPromise=null, config=null;
   const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
-  const getConfig=async()=>config||(config=await fetch('/api/paypal/config',{credentials:'same-origin'}).then(r=>r.json()));
+  const getConfig=async()=>config||(config=await fetch('/api/paypal/config',{credentials:'same-origin'}).then(async r=>{const text=await r.text();let d={};try{d=JSON.parse(text)}catch{throw new Error(r.status===429?'Trop de requêtes. Réessayez dans quelques secondes.':'Réponse PayPal invalide.')}if(!r.ok)throw new Error(d.error||'Configuration PayPal indisponible.');return d}));
   async function loadSdk(){
     if(sdkPromise)return sdkPromise;
     sdkPromise=(async()=>{
@@ -21,18 +21,18 @@
       const c=await getConfig();if(!c.enabled){button.dataset.paypalMounted='disabled';return}
       const sdk=await loadSdk();
       if(!sdk)throw new Error('PayPal est désactivé.');
-      const methods=await sdk.createInstance({clientId:c.clientId,components:['paypal-payments'],pageType:'checkout').then(x=>x.findEligibleMethods({currencyCode:c.currency}).then(m=>({sdk:x,methods:m})));
+      const methods=await sdk.createInstance({clientId:c.clientId,components:['paypal-payments'],pageType:'checkout'}).then(x=>x.findEligibleMethods({currencyCode:c.currency}).then(m=>({sdk:x,methods:m})));
       if(!methods.methods.isEligible('paypal')){button.dataset.paypalMounted='ineligible';return}
       const consultationId=button.dataset.pay;
       const host=document.createElement('div');host.className='paypal-button-wrap';
       const paypalButton=document.createElement('paypal-button');paypalButton.type='pay';paypalButton.setAttribute('aria-label','Payer avec PayPal');host.appendChild(paypalButton);
       button.insertAdjacentElement('afterend',host);button.dataset.paypalMounted='ready';
       const session=methods.sdk.createPayPalOneTimePaymentSession({
-        onApprove:async({orderId})=>{const token=await fetch('/api/csrf',{credentials:'same-origin'}).then(r=>r.json());const r=await fetch(`/api/paypal/orders/${encodeURIComponent(orderId)}/capture`,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json','x-csrf-token':token.csrfToken}});const d=await r.json();if(!r.ok)throw Error(d.error||'Paiement refusé.');window.dispatchEvent(new CustomEvent('paypal:paid',{detail:d}));return d},
+        onApprove:async({orderId})=>{const token=await fetch('/api/csrf',{credentials:'same-origin'}).then(async r=>{const text=await r.text();let d={};try{d=JSON.parse(text)}catch{throw new Error(r.status===429?'Trop de requêtes. Réessayez dans quelques secondes.':'Jeton CSRF indisponible.')}if(!r.ok)throw new Error(d.error||'Jeton CSRF indisponible.');return d});const r=await fetch(`/api/paypal/orders/${encodeURIComponent(orderId)}/capture`,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json','x-csrf-token':token.csrfToken}});const d=await r.json();if(!r.ok)throw Error(d.error||'Paiement refusé.');window.dispatchEvent(new CustomEvent('paypal:paid',{detail:d}));return d},
         onCancel:()=>window.dispatchEvent(new CustomEvent('paypal:cancelled')),
         onError:e=>{console.error(e);window.dispatchEvent(new CustomEvent('paypal:error',{detail:e}))}
       });
-      paypalButton.addEventListener('click',async()=>{try{const token=await fetch('/api/csrf',{credentials:'same-origin'}).then(r=>r.json());const orderPromise=fetch('/api/paypal/orders',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json','x-csrf-token':token.csrfToken},body:JSON.stringify({consultationId})}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||'Impossible de créer la commande PayPal.');return {orderId:d.orderId}});await session.start({presentationMode:'auto'},orderPromise)}catch(e){console.error(e);window.dispatchEvent(new CustomEvent('paypal:error',{detail:e}))}});
+      paypalButton.addEventListener('click',async()=>{try{const token=await fetch('/api/csrf',{credentials:'same-origin'}).then(async r=>{const text=await r.text();let d={};try{d=JSON.parse(text)}catch{throw new Error(r.status===429?'Trop de requêtes. Réessayez dans quelques secondes.':'Jeton CSRF indisponible.')}if(!r.ok)throw new Error(d.error||'Jeton CSRF indisponible.');return d});const orderPromise=fetch('/api/paypal/orders',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json','x-csrf-token':token.csrfToken},body:JSON.stringify({consultationId})}).then(async r=>{const text=await r.text();let d={};try{d=JSON.parse(text)}catch{throw new Error(r.status===429?'Trop de requêtes. Réessayez dans quelques secondes.':'Réponse PayPal invalide.')}if(!r.ok)throw Error(d.error||'Impossible de créer la commande PayPal.');return {orderId:d.orderId}});await session.start({presentationMode:'auto'},orderPromise)}catch(e){console.error(e);window.dispatchEvent(new CustomEvent('paypal:error',{detail:e}))}});
     }catch(e){console.error('PayPal init',e);button.dataset.paypalMounted='error'}
   }
   const scan=()=>document.querySelectorAll('[data-pay]:not([data-paypal-mounted])').forEach(mount);

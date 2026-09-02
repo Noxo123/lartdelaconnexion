@@ -1,0 +1,11 @@
+{
+  "name":"L’Art de la Connexion",
+  "short_name":"LADC",
+  "description":"Consultations privées et visioconférence sécurisée.",
+  "start_url":"/",
+  "display":"standalone",
+  "background_color":"#fbf9ff",
+  "theme_color":"#6d28d9",
+  "lang":"fr",
+  "icons":[]
+}

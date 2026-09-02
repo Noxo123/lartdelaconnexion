@@ -45,9 +45,6 @@ function attachChat(express){
   const wrapped=function(){
     const app=original();
     install(app);
-    // server.js adds the session middleware after creating the app. Chat routes
-    // must execute after that middleware, otherwise req.session is undefined and
-    // every chat request is incorrectly rejected with HTTP 401.
     setImmediate(()=>moveChatRoutesAfterSession(app));
     return app;
   };
@@ -62,34 +59,24 @@ function moveChatRoutesAfterSession(app){
     if(!Array.isArray(stack))return;
     const chatLayers=stack.filter(layer=>layer.__ladcChat);
     if(!chatLayers.length)return;
-
     const sessionIndex=stack.findIndex(layer=>layer.name==='session');
-    if(sessionIndex<0){
-      console.error('[chat] session middleware not found; keeping current route order');
-      return;
-    }
-
-    for(const layer of chatLayers){
-      const i=stack.indexOf(layer);
-      if(i>=0)stack.splice(i,1);
-    }
-
+    if(sessionIndex<0)return;
+    for(const layer of chatLayers){const i=stack.indexOf(layer);if(i>=0)stack.splice(i,1)}
     const newSessionIndex=stack.findIndex(layer=>layer.name==='session');
     stack.splice(newSessionIndex+1,0,...chatLayers);
     console.log('[chat] routes moved after session middleware');
-  }catch(e){
-    console.error('[chat] route reorder:',e.message);
-  }
+  }catch(e){console.error('[chat] route reorder:',e.message)}
 }
 
 function install(app){
   if(app.__chatInstalled)return; app.__chatInstalled=true;
   const add=(method,path,...handlers)=>{
-    const before=app.router?.stack?.length ?? app._router?.stack?.length ?? 0;
-    app[method](path,...handlers);
     const stack=app.router?.stack||app._router?.stack;
-    const layer=stack?.[stack.length-1];
-    if(layer && (stack.length>before))layer.__ladcChat=true;
+    const before=stack?.length||0;
+    app[method](path,...handlers);
+    const nextStack=app.router?.stack||app._router?.stack;
+    const layer=nextStack?.[nextStack.length-1];
+    if(layer&&nextStack.length>before)layer.__ladcChat=true;
   };
   const auth=(req,res,next)=>req.session?.userId?next():res.status(401).json({error:'Authentification requise.'});
   const csrf=(req,res,next)=>{
@@ -116,7 +103,7 @@ function install(app){
     const after=Math.max(0,Number(req.query.after)||0);
     const rows=db.prepare('SELECT * FROM chat_messages WHERE consultation_id=? AND id>? ORDER BY id ASC LIMIT 200').all(id,after);
     db.prepare('UPDATE chat_messages SET read_at=CURRENT_TIMESTAMP WHERE consultation_id=? AND sender_id<>? AND read_at IS NULL').run(id,req.session.userId);
-    res.json({messages:rows.map(cleanMessage),consultation:{id:c.id,subject:c.subject,clientId:c.user_id,clientName:`${c.first_name} ${c.last_name}`,service:c.service_name}});
+    res.json({messages:rows.map(cleanMessage),consultation:{id:c.id,subject:c.subject,clientId:c.user_id,clientName:`${c.first_name} ${c.last_name}`,clientFirstName:c.first_name,clientLastName:c.last_name,service:c.service_name}});
   });
 
   add('post','/api/chat/:consultationId/messages',auth,csrf,(req,res)=>{

@@ -1,0 +1,18 @@
+:root{--polish-glow:rgba(139,92,246,.18)}
+html{scroll-behavior:smooth}
+body{overflow-x:hidden}
+::selection{background:var(--primary);color:#fff}
+button,a,input,select,textarea{outline-offset:3px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(139,92,246,.35)}
+.skip-link{position:fixed;left:16px;top:12px;z-index:10000;transform:translateY(-180%);padding:12px 16px;border-radius:12px;background:var(--ink);color:#fff;text-decoration:none;font-weight:700;transition:.2s}.skip-link:focus{transform:none}
+.site-header{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:rgba(251,249,255,.82)}
+.nav a{transition:transform .18s ease,color .18s ease}.nav a:hover{transform:translateY(-1px)}
+.button{position:relative;overflow:hidden;isolation:isolate}.button::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.22) 50%,transparent 80%);transform:translateX(-120%);transition:transform .55s ease;z-index:-1}.button:hover::after{transform:translateX(120%)}
+.hero-frame{box-shadow:0 30px 90px rgba(83,45,126,.16),0 0 0 1px rgba(139,92,246,.08)}
+.card,.panel,.consultation,.stat{transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.card:hover,.panel:hover,.consultation:hover{transform:translateY(-3px);box-shadow:0 20px 55px rgba(83,45,126,.12);border-color:rgba(139,92,246,.28)}
+.stat:hover{transform:translateY(-2px)}
+.toast{z-index:10001}
+.app-install{display:none;position:fixed;right:18px;bottom:18px;z-index:9000;max-width:360px;padding:16px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.94);box-shadow:0 20px 60px rgba(83,45,126,.18);backdrop-filter:blur(14px)}.app-install.show{display:flex;gap:12px;align-items:center}.app-install p{margin:0;font-size:13px;color:var(--muted)}.app-install strong{display:block;color:var(--ink);margin-bottom:3px}.app-install-actions{display:flex;gap:7px;margin-left:auto}.app-install-actions button{white-space:nowrap}
+.command-hint{position:fixed;right:18px;bottom:18px;z-index:8000;padding:8px 11px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.85);color:var(--muted);font-size:12px;backdrop-filter:blur(10px)}
+@media(max-width:720px){.command-hint{display:none}.app-install{left:14px;right:14px;bottom:14px;max-width:none}.app-install-actions{flex-direction:column}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.card,.panel,.consultation,.stat,.nav a{transition:none}}

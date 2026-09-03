@@ -1,0 +1,1 @@
+(()=>{const clean=()=>{if(location.pathname!=='/admin')return;document.querySelectorAll('#app .panel:not(.ladc-calendar-owner)').forEach(p=>{const t=p.textContent||'';if(/Disponibilités/i.test(t)&&/Créneaux récurrents/i.test(t))p.remove()})};new MutationObserver(clean).observe(document.body,{childList:true,subtree:true});clean()})();

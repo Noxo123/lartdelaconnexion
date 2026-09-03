@@ -10,15 +10,21 @@ on:
         required: false
         default: 'http://82.165.69.104'
         type: string
+      create_release:
+        description: 'Créer une release APK'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
-  contents: read
+  contents: write
+
+env:
+  APP_URL: ${{ inputs.app_url || secrets.APP_URL || 'http://82.165.69.104' }}
 
 jobs:
   apk:
     runs-on: ubuntu-24.04
-    env:
-      APP_URL: ${{ inputs.app_url || secrets.APP_URL || 'http://82.165.69.104' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -26,10 +32,7 @@ jobs:
       - name: Validate APP_URL
         shell: bash
         run: |
-          if [ -z "$APP_URL" ]; then
-            echo "APP_URL manquant"
-            exit 1
-          fi
+          set -euo pipefail
           case "$APP_URL" in
             http://82.165.69.104|https://82.165.69.104|https://*) ;;
             *) echo "APP_URL invalide: $APP_URL"; exit 1;;
@@ -52,19 +55,15 @@ jobs:
         working-directory: mobile
         run: gradle --no-daemon :app:assembleRelease -PappUrl="$APP_URL"
 
-      - name: Locate and rename APK
+      - name: Prepare APK
         shell: bash
         run: |
           set -euo pipefail
-          echo "APK générés :"
-          find mobile/app/build/outputs/apk -type f -name '*.apk' -print
           APK=$(find mobile/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
-          if [ -z "$APK" ]; then
-            echo "Aucun APK trouvé après la compilation."
-            exit 1
-          fi
+          test -n "$APK"
           cp "$APK" "LArtDeLaConnexion-${GITHUB_SHA::7}.apk"
-          echo "APK final: LArtDeLaConnexion-${GITHUB_SHA::7}.apk"
+          echo "apk_path=LArtDeLaConnexion-${GITHUB_SHA::7}.apk" >> "$GITHUB_OUTPUT"
+        id: apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -73,3 +72,27 @@ jobs:
           path: LArtDeLaConnexion-*.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Create GitHub Release with APK
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: L'Art de la Connexion — APK ${{ github.run_number }}
+          body: |
+            ## 📱 L'Art de la Connexion — application Android
+
+            Installez l'application directement sur votre téléphone Android.
+
+            **Serveur intégré :** `${{ env.APP_URL }}`
+
+            ### Installation
+            1. Téléchargez `LArtDeLaConnexion-*.apk`.
+            2. Ouvrez le fichier sur votre téléphone Android.
+            3. Autorisez l'installation depuis cette source si Android le demande.
+            4. Installez puis ouvrez **L'Art de la Connexion**.
+
+            > Pour une utilisation publique, configurez de préférence une URL HTTPS avec un certificat valide.
+          files: LArtDeLaConnexion-*.apk
+          fail_on_unmatched_files: true
+          generate_release_notes: true

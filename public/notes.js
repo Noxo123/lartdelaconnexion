@@ -1,0 +1,23 @@
+(()=>{
+  let activeId=null,csrf=null,rendered=false;
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const notify=x=>window.toast?window.toast(x):window.alert(x);
+  async function token(){if(!csrf){const r=await fetch('/api/csrf',{credentials:'same-origin'});const d=await r.json();if(!r.ok)throw Error(d.error||'Sécurité indisponible.');csrf=d.csrfToken}return csrf}
+  async function api(url,opt={}){const o={...opt,credentials:'same-origin',headers:{...(opt.headers||{})}};if(o.body&&typeof o.body!=='string'){o.headers['content-type']='application/json';o.body=JSON.stringify(o.body)}if((o.method||'GET').toUpperCase()!=='GET')o.headers['x-csrf-token']=await token();const r=await fetch(url,o);let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||'Opération impossible.');return d}
+  function panel(){return `<aside class="client-notes-panel" id="clientNotesPanel"><div class="client-notes-head"><div><span class="section-kicker">Espace propriétaire</span><h3>Notes client</h3><p id="clientNotesClient">Informations privées, visibles uniquement par vous.</p></div><span class="client-notes-lock">🔒</span></div><form id="clientNoteForm"><input name="title" maxlength="120" placeholder="Titre · Ex. Informations personnelles"><textarea name="body" maxlength="5000" rows="4" placeholder="Vanessa, 27 ans, mariée depuis 6 ans…"></textarea><label class="notes-pin"><input type="checkbox" name="pinned"> Épingler cette note</label><button class="button button-small" type="submit">+ Enregistrer la note</button></form><div class="client-notes-list" id="clientNotesList"><div class="client-notes-empty">Chargement des notes…</div></div></aside>`}
+  function noteItem(n){return `<article class="client-note ${n.pinned?'is-pinned':''}" data-note="${n.id}"><div class="client-note-top"><div>${n.pinned?'<span class="note-pin">★</span>':''}<strong>${esc(n.title||'Note')}</strong></div><button type="button" class="note-delete" data-delete-note="${n.id}" aria-label="Supprimer">×</button></div><p>${esc(n.body).replace(/\n/g,'<br>')}</p><time>Modifiée le ${new Intl.DateTimeFormat('fr-FR',{dateStyle:'short',timeStyle:'short'}).format(new Date(n.updatedAt))}</time></article>`}
+  async function load(){
+    if(window.__ladcUserRole!=='owner'||!activeId||document.getElementById('clientNotesPanel'))return;
+    const modal=document.getElementById('chatModal'),win=modal?.querySelector('.chat-window');if(!win)return;
+    let info;try{info=await api(`/api/chat/${activeId}/messages?after=0`)}catch(e){return}
+    if(document.getElementById('clientNotesPanel'))return;
+    win.classList.add('has-client-notes');win.insertAdjacentHTML('beforeend',panel());
+    const p=document.getElementById('clientNotesPanel');const c=info.consultation||{};document.getElementById('clientNotesClient').textContent=`${c.clientName||'Client'} · Notes privées · uniquement visibles par le propriétaire`;
+    async function refresh(){try{const d=await api(`/api/admin/clients/${c.clientId}/notes`);document.getElementById('clientNotesList').innerHTML=d.notes?.length?d.notes.map(noteItem).join(''):'<div class="client-notes-empty">Aucune note. Ajoutez les informations utiles au suivi.</div>'}catch(e){document.getElementById('clientNotesList').innerHTML=`<div class="client-notes-empty">${esc(e.message)}</div>`}}
+    p.querySelector('#clientNoteForm').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,b=f.querySelector('button[type=submit]');const fd=new FormData(f);const body={title:fd.get('title'),body:fd.get('body'),pinned:fd.get('pinned')==='on'};if(!String(body.body||'').trim())return notify('Écrivez une note avant de l’enregistrer.');b.disabled=true;b.textContent='Enregistrement…';try{await api(`/api/admin/clients/${c.clientId}/notes`,{method:'POST',body});f.reset();await refresh();notify('Note enregistrée.')}catch(e){notify(e.message)}finally{b.disabled=false;b.textContent='+ Enregistrer la note'}};
+    p.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-note]');if(!b)return;if(!confirm('Supprimer définitivement cette note ?'))return;try{await api(`/api/admin/client-notes/${b.dataset.deleteNote}`,{method:'DELETE'});await refresh();notify('Note supprimée.')}catch(e){notify(e.message)}});
+    await refresh();rendered=true;
+  }
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-chat]');if(b){activeId=String(b.dataset.chat||'');rendered=false;setTimeout(load,250)}});
+  new MutationObserver(()=>{if(!rendered&&activeId&&window.__ladcUserRole==='owner')load()}).observe(document.body,{childList:true,subtree:true});
+})();

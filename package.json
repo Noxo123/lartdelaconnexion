@@ -1,12 +1,12 @@
 {
   "name":"lartdelaconnexion",
-  "version":"2.2.1",
+  "version":"2.2.2",
   "private":true,
   "description":"Plateforme premium de consultations privées, réservation, paiement PayPal, visioconférence WebRTC et messagerie privée.",
   "main":"server.js",
   "scripts":{
-    "start":"node -r ./express5-bootstrap.js -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js -r ./commerce-bootstrap.js -r ./transfer-expiry-bootstrap.js server.js",
-    "dev":"node -r ./express5-bootstrap.js -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js -r ./commerce-bootstrap.js -r ./transfer-expiry-bootstrap.js --watch server.js"
+    "start":"node -r ./security-hardening-bootstrap.js -r ./express5-bootstrap.js -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js -r ./commerce-bootstrap.js -r ./transfer-expiry-bootstrap.js server.js",
+    "dev":"node -r ./security-hardening-bootstrap.js -r ./express5-bootstrap.js -r ./availability-bootstrap.js -r ./paypal-bootstrap.js -r ./chat-bootstrap.js -r ./commerce-bootstrap.js -r ./transfer-expiry-bootstrap.js --watch server.js"
   },
   "engines":{"node":">=20"},
   "dependencies":{

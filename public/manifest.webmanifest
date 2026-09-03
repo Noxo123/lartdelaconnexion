@@ -3,9 +3,13 @@
   "short_name":"LADC",
   "description":"Consultations privées et visioconférence sécurisée.",
   "start_url":"/",
+  "scope":"/",
   "display":"standalone",
+  "display_override":["window-controls-overlay","standalone"],
   "background_color":"#fbf9ff",
   "theme_color":"#6d28d9",
   "lang":"fr",
-  "icons":[]
+  "orientation":"portrait-primary",
+  "categories":["lifestyle","health","social"],
+  "icons":[{"src":"/assets/logo.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"/assets/logo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
 }

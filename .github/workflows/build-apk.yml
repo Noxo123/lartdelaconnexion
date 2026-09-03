@@ -21,7 +21,7 @@ jobs:
       APP_URL: ${{ inputs.app_url || secrets.APP_URL || 'http://82.165.69.104' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Validate APP_URL
         shell: bash
@@ -37,14 +37,14 @@ jobs:
           echo "APP_URL=$APP_URL"
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.10.2'
 
@@ -52,9 +52,19 @@ jobs:
         working-directory: mobile
         run: gradle --no-daemon :app:assembleRelease -PappUrl="$APP_URL"
 
-      - name: Rename APK
+      - name: Locate and rename APK
         shell: bash
-        run: cp mobile/app/build/outputs/apk/release/app-release.apk "LArtDeLaConnexion-${GITHUB_SHA::7}.apk"
+        run: |
+          set -euo pipefail
+          echo "APK générés :"
+          find mobile/app/build/outputs/apk -type f -name '*.apk' -print
+          APK=$(find mobile/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "Aucun APK trouvé après la compilation."
+            exit 1
+          fi
+          cp "$APK" "LArtDeLaConnexion-${GITHUB_SHA::7}.apk"
+          echo "APK final: LArtDeLaConnexion-${GITHUB_SHA::7}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

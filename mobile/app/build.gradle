@@ -1,0 +1,12 @@
+plugins { id 'com.android.application' }
+
+android { namespace 'fr.lartdelaconnexion.app'; compileSdk 35
+    defaultConfig { applicationId 'fr.lartdelaconnexion.app'; minSdk 24; targetSdk 35; versionCode 1; versionName '2.3.0' }
+    buildTypes { release { minifyEnabled false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),'proguard-rules.pro' } }
+}
+
+def appUrl = project.findProperty('appUrl') ?: System.getenv('APP_URL') ?: ''
+if (!appUrl) throw new GradleException('APP_URL est requis pour construire l APK.')
+
+android.buildFeatures.buildConfig = true
+android.defaultConfig.buildConfigField 'String', 'APP_URL', '"' + appUrl.replace('\\','\\\\').replace('"','\\"') + '"'

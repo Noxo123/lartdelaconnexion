@@ -1,0 +1,63 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: 'URL HTTPS publique de L Art de la Connexion'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ inputs.app_url || secrets.APP_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate APP_URL
+        shell: bash
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "APP_URL manquant. Ajoute le secret APP_URL ou utilise workflow_dispatch avec app_url."
+            exit 1
+          fi
+          case "$APP_URL" in
+            https://*) ;;
+            *) echo "APP_URL doit commencer par https://"; exit 1;;
+          esac
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build release APK
+        working-directory: mobile
+        run: gradle --no-daemon :app:assembleRelease -PappUrl="$APP_URL"
+
+      - name: Rename APK
+        shell: bash
+        run: cp mobile/app/build/outputs/apk/release/app-release.apk "LArtDeLaConnexion-${GITHUB_SHA::7}.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lart-de-la-connexion-apk
+          path: LArtDeLaConnexion-*.apk
+          if-no-files-found: error
+          retention-days: 30

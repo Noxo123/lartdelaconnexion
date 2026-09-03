@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       app_url:
-        description: 'URL HTTPS publique de L Art de la Connexion'
+        description: 'URL publique de L Art de la Connexion'
         required: false
+        default: 'http://82.165.69.104'
         type: string
 
 permissions:
@@ -15,9 +16,9 @@ permissions:
 
 jobs:
   apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
-      APP_URL: ${{ inputs.app_url || secrets.APP_URL }}
+      APP_URL: ${{ inputs.app_url || secrets.APP_URL || 'http://82.165.69.104' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,13 +27,14 @@ jobs:
         shell: bash
         run: |
           if [ -z "$APP_URL" ]; then
-            echo "APP_URL manquant. Ajoute le secret APP_URL ou utilise workflow_dispatch avec app_url."
+            echo "APP_URL manquant"
             exit 1
           fi
           case "$APP_URL" in
-            https://*) ;;
-            *) echo "APP_URL doit commencer par https://"; exit 1;;
+            http://82.165.69.104|https://82.165.69.104|https://*) ;;
+            *) echo "APP_URL invalide: $APP_URL"; exit 1;;
           esac
+          echo "APP_URL=$APP_URL"
 
       - name: Setup Java
         uses: actions/setup-java@v4

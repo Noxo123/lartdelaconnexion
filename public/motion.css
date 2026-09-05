@@ -1,4 +1,4 @@
-/* Premium micro-interactions — L'Art de la Connexion */
+/* Global premium motion system — L'Art de la Connexion */
 @keyframes ladc-fade-up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes ladc-fade-in{from{opacity:0}to{opacity:1}}
 @keyframes ladc-pop{0%{opacity:0;transform:scale(.94)}70%{transform:scale(1.015)}100%{opacity:1;transform:scale(1)}}
@@ -7,12 +7,19 @@
 @keyframes ladc-shimmer{0%{background-position:-180% 0}100%{background-position:180% 0}}
 @keyframes ladc-ripple{to{transform:scale(4);opacity:0}}
 @keyframes ladc-spin{to{transform:rotate(360deg)}}
+@keyframes ladc-glow{0%,100%{opacity:.45;transform:scale(.98)}50%{opacity:.85;transform:scale(1.03)}}
+@keyframes ladc-breathe{0%,100%{transform:translateY(0);box-shadow:0 10px 30px rgba(83,45,126,.06)}50%{transform:translateY(-3px);box-shadow:0 18px 42px rgba(83,45,126,.11)}}
+@keyframes ladc-slide-right{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes ladc-slide-left{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes ladc-ring{0%{transform:scale(.75);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+@keyframes ladc-status{0%,100%{box-shadow:0 0 0 0 rgba(21,128,61,.18)}50%{box-shadow:0 0 0 6px rgba(21,128,61,.05)}}
 
 html{scroll-behavior:smooth}
 body{transition:background-color .35s ease}
 body.motion-ready #app{animation:ladc-fade-in .42s ease both}
 body.is-transitioning #app{opacity:.35;transform:translateY(5px);transition:opacity .16s ease,transform .16s ease}
 
+/* Header / navigation */
 .site-header{transition:box-shadow .3s ease,background-color .3s ease,transform .3s ease}
 .site-header.motion-scrolled{box-shadow:0 10px 35px rgba(83,45,126,.08);background:rgba(255,255,255,.93)}
 .brand-mark{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s ease}
@@ -23,28 +30,57 @@ body.is-transitioning #app{opacity:.35;transform:translateY(5px);transition:opac
 .nav a:not(.button):hover::after{transform:scaleX(1)}
 .menu-button{transition:transform .2s ease,background .2s ease}.menu-button:hover{transform:scale(1.08)}
 
+/* Buttons / controls */
 .button{position:relative;overflow:hidden;isolation:isolate;transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,filter .22s ease}.button:hover{transform:translateY(-2px)}.button:active{transform:translateY(0) scale(.98);filter:brightness(.97)}
 .button::before{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.25) 45%,transparent 65%);background-size:220% 100%;transform:translateX(-100%);transition:transform .55s ease;pointer-events:none}.button:hover::before{transform:translateX(100%)}
 .button-ripple{position:absolute;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.42);transform:scale(0);pointer-events:none;animation:ladc-ripple .55s ease-out forwards;z-index:-1}
+.icon-button{transition:transform .2s ease,background .2s ease,box-shadow .2s ease}.icon-button:hover{transform:rotate(6deg) scale(1.06);box-shadow:0 10px 24px rgba(83,45,126,.1)}
 
+/* Landing / hero */
 .hero h1{animation:ladc-fade-up .65s .05s both}.hero-copy{animation:ladc-fade-up .65s .12s both}.hero-actions{animation:ladc-fade-up .65s .19s both}.trust-row{animation:ladc-fade-up .65s .26s both}.hero-frame{animation:ladc-pop .7s .1s both}.floating-card{animation:ladc-fade-up .65s .35s both}.floating-card.one{animation-delay:.35s}.floating-card.two{animation-delay:.48s}.hero-frame:hover{transform:rotate(0deg) translateY(-3px);transition:transform .4s cubic-bezier(.2,.8,.2,1)}
 .floating-card{transition:transform .3s ease,box-shadow .3s ease}.floating-card:hover{transform:translateY(-5px);box-shadow:0 22px 45px rgba(76,29,149,.2)}
 .ambient-one{animation:ladc-float 9s ease-in-out infinite}.ambient-two{animation:ladc-float 11s 1s ease-in-out infinite reverse}
 
-.motion-reveal{opacity:0;transform:translateY(20px);transition:opacity .65s ease,transform .65s cubic-bezier(.2,.8,.2,1)}.motion-reveal.is-visible{opacity:1;transform:none}.motion-reveal:nth-child(2){transition-delay:.05s}.motion-reveal:nth-child(3){transition-delay:.1s}.motion-reveal:nth-child(4){transition-delay:.15s}
+/* Shared reveal / cards */
+.motion-reveal{opacity:0;transform:translateY(20px);transition:opacity .65s ease,transform .65s cubic-bezier(.2,.8,.2,1)}.motion-reveal.is-visible{opacity:1;transform:none}.motion-reveal:nth-child(2){transition-delay:.05s}.motion-reveal:nth-child(3){transition-delay:.1s}.motion-reveal:nth-child(4){transition-delay:.15s}.motion-reveal:nth-child(5){transition-delay:.2s}.motion-reveal:nth-child(6){transition-delay:.25s}
 .card,.panel,.consultation,.step,.stat,.auth-card,.quote-card{transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease,border-color .28s ease}.card:hover,.stat:hover{transform:translateY(-5px);box-shadow:0 20px 48px rgba(83,45,126,.11);border-color:#ddcff0}.consultation:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(83,45,126,.08)}.step:hover{transform:translateX(4px)}.card-icon,.step-number,.avatar{transition:transform .3s ease,box-shadow .3s ease}.card:hover .card-icon,.step:hover .step-number{transform:scale(1.08) rotate(-3deg);box-shadow:0 10px 24px rgba(109,40,217,.12)}
 
+/* Sections / content blocks */
+.section,.panel,.card,.consultation,.quote-card,.auth-card{will-change:transform}
+.section-illustration img{transition:transform .6s cubic-bezier(.2,.8,.2,1),filter .6s ease}.section-illustration:hover img{transform:translateY(-5px) scale(1.015);filter:drop-shadow(0 18px 28px rgba(83,45,126,.12))}
+.badge{transition:transform .2s ease,box-shadow .2s ease}.badge:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(83,45,126,.08)}
+
+/* Forms */
 .field input,.field textarea,.field select{transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}.field input:hover,.field textarea:hover,.field select:hover{border-color:#cbb8e3}.field input:focus,.field textarea:focus,.field select:focus{transform:translateY(-1px)}
 .auth-card{animation:ladc-pop .5s ease both}.avatar{animation:ladc-pulse 3s 1s ease-in-out infinite}
 
-.modal-backdrop{animation:ladc-fade-in .22s ease both}.modal{animation:ladc-pop .3s cubic-bezier(.2,.8,.2,1) both}.icon-button{transition:transform .2s ease,background .2s ease}.icon-button:hover{transform:rotate(6deg) scale(1.06)}
+/* Modals / overlays */
+.modal-backdrop{animation:ladc-fade-in .22s ease both}.modal{animation:ladc-pop .3s cubic-bezier(.2,.8,.2,1) both}.modal-backdrop .modal{will-change:transform,opacity}
 .toast{transition:opacity .25s ease,transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease}.toast.show{box-shadow:0 24px 60px rgba(36,24,47,.24)}
 
-.video-page .stage{animation:ladc-pop .55s ease both}.local-wrap{transition:transform .25s ease,box-shadow .25s ease}.local-wrap:hover{transform:scale(1.025);box-shadow:0 16px 38px rgba(0,0,0,.38)}.control{transition:transform .2s ease,background .2s ease,box-shadow .2s ease}.control:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 8px 22px rgba(0,0,0,.2)}.control:active{transform:scale(.95)}
-
-.money-transfer-card{animation:ladc-pop .45s cubic-bezier(.2,.8,.2,1) both}.money-transfer-icon{transition:transform .35s ease}.money-transfer-card:hover .money-transfer-icon{transform:translateY(-2px) rotate(-8deg)}
-
+/* Loading states */
 .button:disabled{background-image:linear-gradient(100deg,#e8def4 20%,#f8f4fc 35%,#e8def4 50%);background-size:220% 100%;animation:ladc-shimmer 1.5s linear infinite;color:#806f91}
 
-@media(max-width:900px){.hero h1{animation-delay:0}.hero-frame{animation-delay:.05s}.card:hover,.stat:hover{transform:translateY(-3px)}.step:hover{transform:none}}
+/* Video / consultation */
+.video-page .stage{animation:ladc-pop .55s ease both}.local-wrap{transition:transform .25s ease,box-shadow .25s ease}.local-wrap:hover{transform:scale(1.025);box-shadow:0 16px 38px rgba(0,0,0,.38)}.control{transition:transform .2s ease,background .2s ease,box-shadow .2s ease}.control:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 8px 22px rgba(0,0,0,.2)}.control:active{transform:scale(.95)}
+
+/* Chat */
+.chat-window{animation:ladc-pop .35s cubic-bezier(.2,.8,.2,1) both}.chat-message{animation:ladc-fade-up .28s ease both}.chat-message:hover{transform:translateY(-1px);transition:transform .2s ease}.chat-head{transition:box-shadow .25s ease}.chat-window:focus-within .chat-head{box-shadow:0 8px 24px rgba(83,45,126,.08)}
+.chat-compose textarea,.chat-compose input{transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}.chat-compose textarea:focus,.chat-compose input:focus{transform:translateY(-1px)}
+
+/* Status / live indicators */
+.is-online,.online,.status-online{animation:ladc-status 2.4s ease-in-out infinite}
+
+/* Tables / list rows */
+.list-item,.activity-row,.client-row,.consultation-row{transition:transform .22s ease,background .22s ease,box-shadow .22s ease}.list-item:hover,.activity-row:hover,.client-row:hover,.consultation-row:hover{transform:translateX(3px);box-shadow:0 8px 22px rgba(83,45,126,.06)}
+
+/* Admin + Space workspaces */
+.admin-sidebar,.space-sidebar{animation:ladc-slide-right .5s cubic-bezier(.2,.8,.2,1) both}.admin-topbar,.space-topbar{animation:ladc-slide-left .5s cubic-bezier(.2,.8,.2,1) both}.admin-kpi,.space-kpi{animation:ladc-fade-up .5s cubic-bezier(.2,.8,.2,1) both}.admin-kpi:nth-child(2),.space-kpi:nth-child(2){animation-delay:.06s}.admin-kpi:nth-child(3),.space-kpi:nth-child(3){animation-delay:.12s}.admin-kpi:nth-child(4),.space-kpi:nth-child(4){animation-delay:.18s}.admin-sidebar .nav-item,.space-nav-item{transition:transform .22s ease,background .22s ease,color .22s ease,box-shadow .22s ease}.admin-sidebar .nav-item:hover,.space-nav-item:hover{transform:translateX(3px)}.admin-sidebar .nav-item.active,.space-nav-item.active{box-shadow:0 8px 22px rgba(109,40,217,.07)}
+.admin-shell,.space-shell{animation:ladc-fade-in .45s ease both}.admin-content,.space-main{min-width:0}.admin-panel,.space-content{animation:ladc-fade-up .45s ease both}.admin-panel:hover,.space-content:hover{box-shadow:0 18px 48px rgba(83,45,126,.08)}
+
+/* Images, avatars and decorative marks */
+.avatar:hover,.space-avatar:hover,.admin-avatar:hover{transform:scale(1.06) rotate(-2deg);box-shadow:0 12px 28px rgba(83,45,126,.13)}
+.logo,.site-logo{transition:transform .35s cubic-bezier(.2,.8,.2,1),filter .35s ease}.logo:hover,.site-logo:hover{transform:scale(1.05) rotate(-3deg);filter:drop-shadow(0 10px 18px rgba(109,40,217,.18))}
+
+@media(max-width:900px){.hero h1{animation-delay:0}.hero-frame{animation-delay:.05s}.card:hover,.stat:hover{transform:translateY(-3px)}.step:hover{transform:none}.admin-sidebar,.space-sidebar{animation:ladc-fade-up .4s ease both}.admin-topbar,.space-topbar{animation:ladc-fade-up .4s .04s ease both}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}.motion-reveal{opacity:1!important;transform:none!important}.button::before,.button-ripple{display:none!important}}
